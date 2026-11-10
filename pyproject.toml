@@ -1,7 +1,7 @@
 [project]
 name = "food-allergy-tracker"
 version = "0.1.0"
-description = "Add your description here"
+description = "Hassas: a chat companion that finds hidden food triggers in your own log"
 readme = "README.md"
 authors = [
     { name = "Moaz Abdelaziz", email = "moathabdelaziz@outlook.com" }
@@ -13,14 +13,17 @@ dependencies = [
 ]
 
 [project.scripts]
-start-dev = "food_allergy_tracker.main:main"
+start-dev = "hassas.main:main"
 
 [tool.fastapi]
-entrypoint = "food_allergy_tracker.main:app"
+entrypoint = "hassas.main:app"
 
 [build-system]
 requires = ["uv_build>=0.12.15,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "hassas"
 
 [dependency-groups]
 dev = [

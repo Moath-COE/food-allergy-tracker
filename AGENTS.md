@@ -11,7 +11,8 @@ Learning project: take Hassas from idea to production while learning software en
 - One phase at a time, in ROADMAP order. Phases 1–5 (Must) before Part B. Don't jump ahead or add features not in the PRD.
 
 ## Source of truth
-- `docs/IDEA.md` (why), `docs/PRD.md` (what counts as done, requirement IDs), `docs/ROADMAP.md` (order of work) are loaded via `.opencode/opencode.json`. Nothing is built yet, so these docs are the only truth. If code later disagrees with the docs, flag it and ask which one is right.
+- `docs/IDEA.md` (why), `docs/PRD.md` (what counts as done, requirement IDs), `docs/ROADMAP.md` (order of work), `docs/ARCHITECTURE.md` (how: stack, module structure, dependency rules, per-phase technical approach) are loaded via `.opencode/opencode.json`. If code disagrees with the docs, flag it and ask which one is right.
+- Technical decisions are recorded as ADRs in `docs/adr/` (see "Architecture decisions" below). ARCHITECTURE.md says what is true now; ADRs say why.
 - Refer to requirements by ID (`CH-1`, `ANA-9`, `SAF-3`...). Tests are named by ID, e.g. `test_LOG_2`.
 - When a PRD §8 "Open question" is decided, remind the user to update the PRD and tick the ROADMAP checkbox.
 
@@ -33,5 +34,14 @@ Learning project: take Hassas from idea to production while learning software en
 - The first commit should be the docs + `README.md` + `AGENTS.md` + `CLAUDE.md` + `.opencode/opencode.json` on `main`; after that, branches only.
 - Never commit secrets, `.env`, or generated artifacts. Remind the user to check `git status` / `git diff --staged` before each commit.
 
-## Planned stack (PRD §6, not yet created)
-Python + FastAPI managed with uv, PostgreSQL, Procrastinate (Postgres queue), Meta models via the Meta Model API, Telegram Bot API (WhatsApp Cloud API later). Don't suggest replacing these without a clear reason. Once real config exists, verify commands against it and add them here (uv, test, lint, CI order).
+## Architecture decisions (ADRs)
+- Format: Michael Nygard's template. Copy `docs/adr/template.md` (it's a filled-in example). Sections: title, Date, Status, Context, Decision, Consequences. Keep each ADR to about a page.
+- File name: `docs/adr/NNNN-kebab-case-title.md`, numbered in order, never reused (`0003-use-httpx-for-telegram.md`). Heading: `# N. Title in imperative form`.
+- Status: `Proposed` → `Accepted`, later `Deprecated` or `Superseded by [ADR-N](NNNN-....md)`.
+- Once Accepted, an ADR is not edited (except its status line). To change a decision, write a new ADR that supersedes it, and update the old one's status.
+- Write an ADR when a choice is hard to reverse or affects several modules: a new library or service, a module boundary, a data/schema rule, a security choice, or a PRD §8 open question being decided. Don't write ADRs for small, local choices.
+- The ADR goes in the same PR as the change it justifies (or in a `docs/adr-...` PR if it's decided before the code exists). Update the index in `docs/ARCHITECTURE.md` §12 and, if the decision changes the design, the relevant ARCHITECTURE.md section.
+- Agent: when the user makes or asks about such a decision, prompt them to write the ADR, and review it (is the Context honest about the alternatives? are the negative Consequences listed?).
+
+## Stack & structure
+Defined in `docs/ARCHITECTURE.md` (§2 stack, §4 module map and import rules, §13 phase playbook). PRD §6 fixes Python + FastAPI + uv, PostgreSQL, Procrastinate, Meta models (via the OpenAI SDK against Meta's OpenAI-compatible endpoint, behind an `LLMClient` protocol), Telegram Bot API (WhatsApp Cloud API later). Don't suggest a library or pattern outside ARCHITECTURE.md without proposing an ADR. Once real config exists, verify commands against `pyproject.toml` and list them here (uv, test, lint, CI order).
