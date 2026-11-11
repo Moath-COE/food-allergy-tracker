@@ -33,6 +33,8 @@ People react to something they ate (hives, swelling, gut symptoms) but can't fin
 
 ## 2. What Hassas does
 
+Hassas is for adults tracking their own **food reactions**, whether allergic or not. It never says which kind a reaction is.
+
 - **Natural chat logging** in a messaging app — text or voice notes, in whatever words the user would use with a friend.
   e.g. _"Had a cheeseburger and fries from Joe's, then a latte"_
 - **Speaks the user's language** — English, Arabic (any dialect), or a mix.
@@ -57,6 +59,8 @@ Hassas doesn't rely on what the model "remembers" about a dish. For every logged
    1. the restaurant's or brand's own published menu, ingredient or allergen information
    2. packaging and product databases (for packaged foods)
    3. standard recipes for the dish, from several independent sources
+
+   Home-cooked dishes have no official source, so they're researched as standard recipes. Whatever the user says went into the dish counts as _confirmed_.
 2. **Verifies the findings** before they enter the analysis:
    - **Cross-checking** — an ingredient found in several independent sources is trusted more than one found in a single recipe.
    - **Source ranking** — official restaurant or brand information outranks generic recipes.
@@ -64,6 +68,7 @@ Hassas doesn't rely on what the model "remembers" about a dish. For every logged
    - **Conflict flagging** — when sources disagree, the ingredient is flagged instead of silently picked.
    - **Human confirmation** — uncertain ingredients that matter become a follow-up question to the user or an "ask the restaurant" message.
    - **Citations** — every ingredient keeps the source it came from, shown in the Pattern Summary's evidence trail.
+   - **One name per ingredient** — every ingredient maps to a single canonical name (with English and Arabic names and aliases), so "parmesan", "جبنة" and "cheese" aren't scored as strangers. Each canonical ingredient also belongs to zero or more **allergen groups** (milk, wheat, peanuts, mammalian meat…), so cheese, butter and whey all add up under _milk_.
 3. **Weights the analysis by confidence** — a _possible_ ingredient counts less than a _confirmed_ one, so a guess can never dominate the result.
 4. **Remembers verified dishes** — once a dish from a specific place is verified, Hassas reuses it the next time it's logged.
    Research runs in the background: Hassas acknowledges a log instantly and verifies the ingredients afterwards, so logging stays fast.
@@ -78,7 +83,7 @@ Ingredient uncertainty isn't hidden or averaged away — it's built into the sco
 
 1. **Probabilistic exposure.** Each meal contributes an exposure probability for each ingredient, from its verification level (e.g. _confirmed_ ≈ 1.0, _likely_ ≈ 0.7, _possible_ ≈ 0.3; tunable).
 2. **Time-weighted windows.** Exposure before a reaction is weighted by a delay curve across the 0–8 h window, instead of a hard cut-off.
-3. **Case vs. control comparison.** Expected exposure in the windows before reactions is compared with matched control windows from the same user's symptom-free periods (e.g. the same time of day on other days). This is what neutralizes everyday foods: if bread is everywhere, it's equally present in both.
+3. **Case vs. control comparison.** Expected exposure in the windows before reactions is compared with matched control windows from the same user's symptom-free periods (e.g. the same time of day on other days). This is what neutralizes everyday foods: if bread is everywhere, it's equally present in both. Control windows come only from days the user actually logged: a day with no logs is unknown, not symptom-free. Reaction reports close together (e.g. hives, then stomach pain an hour later) count as one episode. Scoring runs at both ingredient and allergen-group level.
 4. **Small-data shrinkage.** Scores are pulled toward "no pattern" until the evidence is strong enough to overcome it (a Bayesian prior), so two coincidences can't produce a top result.
 5. **Simulating the unknowns.** The analysis is re-run many times, each time randomly deciding whether each uncertain ingredient was present according to its probability (Monte Carlo). This gives every score a **range**, not just a number: a pattern that holds across all simulations is robust; one that appears only when guesses go a certain way is fragile.
 6. **Cofactor check.** Each top pattern is also scored with and without cofactors (exercise, alcohol, painkillers), to show when an ingredient only seems to matter in combination.
@@ -144,7 +149,7 @@ These are core design decisions for Hassas, not add-ons:
 - **Hassas never diagnoses.** It never says what someone is allergic to.
 - **Hassas never gives dietary instructions.** No "avoid X," no diets, no nutrition advice — no calories, macros or diet tips.
 - **The output is the user's own data, organized.** Patterns in their log, plus a summary they can take to a clinician, who makes the decisions.
-- **Severe symptoms come first.** Anything that sounds like a serious reaction gets an immediate emergency-care referral, before any logging.
+- **Severe symptoms come first.** Anything that sounds like a serious reaction gets an immediate, clear warning to seek emergency help, before any logging, even from someone who hasn't finished onboarding. Hassas never contacts anyone or acts on the user's behalf.
 - **Honest uncertainty.** Every ingredient carries a confidence level and a source, every pattern carries an uncertainty range and status, and no pattern is shown before the minimum-evidence threshold is met. Hassas never presents a guess as a fact.
 - **Careful language.** Hassas talks about "your log," "patterns," and "worth discussing with your doctor" — never "diagnosis," "allergy test," or "safe to eat."
 - **Health data is treated as sensitive.** Encrypted storage, minimal access, consent before anything is stored, and clear documentation of how data is handled.
@@ -157,7 +162,7 @@ Food-and-symptom diary apps already exist. Most of them are standalone apps with
 
 |                      | **Typical existing apps**                              | **Hassas**                                                                                           |
 | -------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| Where it lives       | A separate app to remember to open                     | Inside a messaging app people already use (Telegram; WhatsApp as premium)                            |
+| Where it lives       | A separate app to remember to open                     | Inside a messaging app people already use (Telegram first; WhatsApp later)                           |
 | Logging              | Forms, food databases, barcodes, photos                | Natural conversation, text or voice                                                                  |
 | Ingredient knowledge | User entry, a fixed database, or unverified AI guesses | A dedicated research agent + an independent verification agent, with confidence levels and citations |
 | Hidden ingredients   | Only what the user knows to enter                      | Actively looks for likely hidden components and cross-reactions                                      |
@@ -189,7 +194,8 @@ Real-world use (people logging their own meals) shows usability; the simulated b
 ## 8. Channels
 
 - **Telegram is the first channel.** Its Bot API is free, has no 24-hour messaging window or per-message fees, and needs no business verification — ideal for development and an open beta, and it lets Hassas send reminders and follow-ups when they're useful.
-- **WhatsApp is planned as a premium channel.** It's where most of the target audience already chats, but it charges per message and limits messages a business starts, so it fits a paid tier.
+- **Private chats only.** Hassas works one-to-one; added to a group, it says so and leaves, so no one's health data is shared with the group.
+- **WhatsApp comes later.** It's where most of the target audience already chats, but it charges per message and limits messages a business starts. Plans and paid tiers may come with it; for now Hassas is free.
 - **The core is channel-neutral.** Conversation logic speaks in neutral messages (text, a short choice, a summary link, a nudge) and works within the stricter limits of both apps: at most three options per question, typed answers always accepted, no reliance on editing messages or sending unprompted. Each app gets a thin adapter; Telegram-only features (inline keyboards, message editing, Mini Apps, a commands menu) are extras on top.
 - **One user, many channels.** Users have an internal identity, with each messaging account linked to it, so a user can later move to or add WhatsApp without losing their history.
 - **The Pattern Summary is a web page**, so it works on any device and can be shared with a doctor by link. In Telegram it can also open as a Mini App — the same page, not a separate feature set.
@@ -206,7 +212,7 @@ Real-world use (people logging their own meals) shows usability; the simulated b
 - Deterministic analysis engine and summary builder
 - Database of verified dishes, reused across logs
   **Onboarding**
-- Short in-chat onboarding: language, timezone, consent, optional known triggers
+- Short in-chat onboarding: language, timezone, consent (adults, 18+), optional known triggers
   **Logging**
 - Meal and symptom logging through chat (Telegram; WhatsApp later), by text or voice note
 - English and Arabic (any dialect), including mixed messages
@@ -217,10 +223,13 @@ Real-world use (people logging their own meals) shows usability; the simulated b
 - Multi-source verification with per-ingredient confidence levels (confirmed / likely / possible)
 - Conflict flagging and source citations
 - Memory of verified dishes per restaurant
+- Home-cooked dishes researched as standard recipes, with user-listed ingredients counted as confirmed
+- One canonical name per ingredient (English + Arabic), grouped into allergen groups
 - Targeted follow-up questions for uncertain ingredients that matter
 - "Ask the restaurant" message drafting
   **Analysis**
-- Case-crossover pattern analysis with delay-weighted 0–8 h lookback windows and matched control windows
+- Case-crossover pattern analysis with delay-weighted 0–8 h lookback windows and matched control windows (from actively logged days only)
+- Scoring at both ingredient and allergen-group level
 - Probabilistic, confidence-weighted ingredient exposures
 - Bayesian shrinkage for small data
 - Monte Carlo simulation of uncertain ingredients → score ranges
@@ -230,7 +239,7 @@ Real-world use (people logging their own meals) shows usability; the simulated b
   **Output**
 - Pattern Summary web page: timeline, ranked ingredients with scores, ranges and statuses, uncertainty highlights, evidence trail with sources and confidence levels, boundary statement
   **Safety**
-- Severe-symptom detection with immediate emergency-care referral
+- Severe-symptom detection with an immediate seek-emergency-help warning, on every message
 - No diagnosis, no dietary instructions
 - Consent before storing health data; encrypted storage
   **Validation**
