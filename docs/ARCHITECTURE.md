@@ -296,7 +296,7 @@ Decisions are recorded as ADRs in [`docs/adr/`](adr/), using the Michael Nygard 
 | 0002 | SQLAlchemy 2.0 + Alembic with psycopg 3                       |
 | 0003 | Plain httpx for the Telegram adapter                          |
 | 0004 | OpenAI SDK (Responses API) against the Meta Model API, behind `LLMClient` |
-| [0005](adr/0005-package-layout-and-import-rules.md) | Package layout and import-linter dependency rules |
+| [0005](adr/0005-package-layout-and-import-rules.md) | Enforce package layout and import-linter dependency rules |
 | 0006 | Two-tier config: env for secrets, `analysis.toml` for algorithm parameters |
 
 **Decided 2026-11-11, to record with the change that uses them:** no pre-consent holding (ONB-2), ingredient vocabulary + allergen groups (VER-6, VER-7, ANA-12), sync ack path (CHAT-7), Meta built-in web search (behind `SearchClient`), summary links 30 days + revocable (SUM-1), transcription via Meta + ffmpeg (CHAT-8).

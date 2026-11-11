@@ -1,4 +1,4 @@
-# 5. Enforce the package layout and import rules with import-linter
+# 5. Enforce package layout and import-linter dependency rules
 
 Date: 2026-11-11
 Status: Accepted
@@ -38,7 +38,7 @@ Choices that go with them:
 - **Allow-lists, not deny-lists.** Contracts 1, 2, 5 and 9 forbid `hassas.*` (or `hassas`) and list the allowed imports in `ignore_imports`. A new top-level module is then forbidden by default and needs a deliberate edit to be allowed. Contract 3 uses `hassas.*` as its source for the same reason.
 - **Indirect imports** are allowed in contracts 5 and 6 (`channels -> conversation -> conversation.x`, `conversation -> db.repositories -> db.models` are the intended paths) and checked everywhere else.
 - **`AnalysisConfig` lives in `analysis/config.py`** with a pure `AnalysisConfig.from_toml(text: str)`. Callers (`hassas/config.py` for the app, the benchmark CLI) read `config/analysis.toml` themselves. That keeps `analysis/` free of I/O and lets `benchmark` stay inside its import rule.
-- **Layout:** every package in the ARCHITECTURE.md §4 module map exists from this task on, empty apart from `__init__.py` or `.gitkeep`.
+- **Layout:** every package in the ARCHITECTURE.md §4 module map exists, empty apart from `__init__.py` or `.gitkeep`. Modules with logic (`hassas.logging`, `analysis/config.py`, `db/models.py`) come with the tasks that need them.
 - **Tests:** every contract has a test that copies the tree to a temp directory, adds one violating module and expects that contract to break, and a test that the allowed imports stay clean (`tests/unit/test_import_contracts.py`).
 
 ## Consequences
@@ -49,7 +49,7 @@ Choices that go with them:
 - The SDK contract lists SDK names. A channel SDK not on the list (a new library) is not caught until it is added.
 - Contract 6 allows only `hassas.db.repositories` and everything under it. `db.mappers` (the database-to-`AnalysisInput` mapping) is therefore not importable from core code; it has to be reached through a repository method. If that proves awkward, change the contract in a new ADR.
 - A direct `import hassas.db` or `from hassas.db import x` in core code is also an error, even though `hassas/db/__init__.py` holds no logic.
-- `hassas.logging` and `hassas.db.models` / `session` do not exist yet. Their entries cost nothing today and apply as soon as the modules appear.
+- `hassas.logging` and `hassas.db.models` / `session` do not exist yet. Their entries cost nothing today and apply as soon as the modules appear. The allow-lists set `unmatched_ignore_imports_alerting = "none"` so that such entries are accepted, which also means a stale entry is never reported.
 - Plain `import hassas` (the root `__init__`) is not covered by the `hassas.*` forms in contracts 1 and 2, only by contract 9. The root `__init__` is empty and should stay so.
 - The contract tests start about seventy `lint-imports` subprocesses, run eight at a time, and add about eight seconds to the test run.
 - import-linter is one more dev dependency, pinned in `uv.lock`.

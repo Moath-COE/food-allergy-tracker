@@ -130,6 +130,7 @@ def test_domain_cannot_import_other_hassas_packages(tmp_path: Path) -> None:
         "from hassas import messaging\n",
         "import hassas.analysis\n",
         "from hassas.db.repositories import users\n",
+        "import benchmark\n",
     ]
     cases = {
         source: {"hassas/domain/bad.py": source, "hassas/db/repositories/users.py": ""}
@@ -139,11 +140,12 @@ def test_domain_cannot_import_other_hassas_packages(tmp_path: Path) -> None:
     assert_all_break(tmp_path, DOMAIN, cases)
 
 
-def test_analysis_cannot_import_anything_but_domain(tmp_path: Path) -> None:
+def test_ANA_9_analysis_cannot_import_anything_but_domain(tmp_path: Path) -> None:
     sources = [
         "from hassas import messaging\n",
         "import hassas.config\n",
         "from hassas.db.repositories import users\n",
+        "import benchmark\n",
     ]
     cases = {
         source: {"hassas/analysis/bad.py": source, "hassas/db/repositories/users.py": ""}
@@ -362,7 +364,7 @@ def test_agents_cannot_import_conversation_or_channels(tmp_path: Path) -> None:
 # --- benchmark ---
 
 
-def test_benchmark_cannot_import_anything_but_analysis_and_domain(tmp_path: Path) -> None:
+def test_BEN_4_benchmark_cannot_import_anything_but_analysis_and_domain(tmp_path: Path) -> None:
     sources = [
         "import hassas.messaging\n",
         "import hassas.config\n",
@@ -377,7 +379,7 @@ def test_benchmark_cannot_import_anything_but_analysis_and_domain(tmp_path: Path
     assert_all_break(tmp_path, BENCHMARK, cases)
 
 
-def test_benchmark_may_import_analysis_and_domain(tmp_path: Path) -> None:
+def test_BEN_4_benchmark_may_import_analysis_and_domain(tmp_path: Path) -> None:
     ok = "import hassas.analysis\nimport hassas.domain\nfrom hassas.analysis import engine\n"
     cases = {
         "analysis and domain": {

@@ -66,13 +66,13 @@ include_external_packages = true
 name = "domain imports nothing else from hassas (ARCHITECTURE section 4)"
 type = "forbidden"
 source_modules = ["hassas.domain"]
-forbidden_modules = ["hassas.*"]
+forbidden_modules = ["hassas.*", "benchmark"]
 
 [[tool.importlinter.contracts]]
 name = "analysis imports only domain from hassas (ANA-9, BEN-4)"
 type = "forbidden"
 source_modules = ["hassas.analysis"]
-forbidden_modules = ["hassas.*"]
+forbidden_modules = ["hassas.*", "benchmark"]
 ignore_imports = [
     "hassas.analysis -> hassas.domain",
     "hassas.analysis -> hassas.domain.**",
