@@ -11,6 +11,13 @@ Hassas is a chat companion that finds patterns between meals and food reactions 
 - The owner merges. Agents open PRs and leave `main` to the owner.
 - Work follows `docs/ROADMAP.md`: numbered phases of 1-PR tasks (`[N.M]`). Each phase is a GitHub milestone and each task an issue; the owner picks the next one.
 
+## Implementation runs in subagents
+Planning (grilling, specs, issues) happens in the main session. Implementing a planned task is always delegated:
+- **Dispatch** one subagent per task: Sonnet 5.5 (`claude-sonnet-5-5`), effort `high`, working on the task's branch.
+- **Brief** it with the issue number, the branch, the decisions from planning, and the agreed test seams (the requirement IDs' acceptance checks). The subagent can't ask the owner, so the brief settles everything `tdd` would otherwise confirm.
+- **Skills:** the subagent reads `.agents/skills/implement/SKILL.md` and follows it (the skill can't be loaded through the Skill tool), plus any other skill the task needs (`tdd`, `code-review`, `codebase-design`, `domain-modeling`, `writing-for-agents`...).
+- **Hand-back:** the subagent commits on the branch. The main session then reruns the CI checks, reviews the diff and opens the PR.
+
 ## Source of truth
 - `docs/IDEA.md` (why), `docs/PRD.md` (what counts as done, requirement IDs), `docs/ROADMAP.md` (order of work), `docs/ARCHITECTURE.md` (how: stack, module structure, dependency rules) are loaded via `.opencode/opencode.json` and `CLAUDE.md`. If code disagrees with the docs, flag it and ask which one is right.
 - Technical decisions are ADRs in `docs/adr/` (see "Architecture decisions"). ARCHITECTURE.md says what is true now; ADRs say why.
