@@ -38,6 +38,9 @@ jobs:
       - name: Type-check
         run: uv run mypy src
 
+      - name: Check import rules
+        run: uv run lint-imports
+
       - name: Test
         run: uv run pytest
 
