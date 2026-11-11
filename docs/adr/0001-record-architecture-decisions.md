@@ -13,7 +13,7 @@ Alternatives considered:
 
 - **No records.** The reasoning lives in PR descriptions and chat. Cheapest now, but PR threads are not read when an agent plans a task, and the reasons are lost once the PR is squashed and the branch deleted.
 - **Decisions only inside ARCHITECTURE.md.** One file to read, but it mixes "what is true" with "why it became true". Rejected alternatives and downsides pile up in a document that agents are meant to read quickly.
-- **MADR (Markdown Any Decision Records).** Well supported by tooling, but its template has more sections (decision drivers, considered options with pros and cons, confirmation) than a one-person project with a short-lived codebase will keep filled in.
+- **MADR (Markdown Any Decision Records).** Well supported by tooling, but its template has more sections (decision drivers, considered options with pros and cons, confirmation) than a small project with one owner is likely to keep filled in.
 - **Michael Nygard's ADR format.** Title, Date, Status, Context, Decision, Consequences. About a page each, easy for an agent to write and review.
 
 ## Decision
