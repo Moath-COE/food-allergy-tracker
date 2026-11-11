@@ -58,6 +58,7 @@ Verified commands:
 - `uv run pre-commit install`: enable the git hooks (ruff, end-of-file, large files, gitleaks)
 - `uv run ruff format .` and `uv run ruff check .`: format and lint
 - `uv run mypy src`: type-check (strict)
+- `uv run lint-imports`: check the module dependency rules (ARCHITECTURE §4; CI)
 - `uv run pytest`: tests, `llm` evals excluded
 - `uv run pytest -m llm`: LLM evals (costs credits; exits 5 until the first eval exists)
 - `uv run fastapi dev`: run the app with reload
