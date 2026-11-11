@@ -94,7 +94,7 @@ Package name: **`hassas`**.
 ```
 src/hassas/
   main.py              # app factory and wiring only (create_app, routers, lifespan)
-  config.py            # Settings (env) + AnalysisConfig loader (TOML)
+  config.py            # Settings (env); also reads config/analysis.toml and builds AnalysisConfig
   health.py            # GET /health (liveness; later also DB readiness)
   logging.py           # structlog setup, trace-id contextvar
   domain/              # PRD §5 entities as plain types (dataclasses / Pydantic). Imports nothing from hassas.
@@ -111,7 +111,8 @@ src/hassas/
     verification.py    # verification agent (VER-*)
     schemas.py         # Pydantic output schemas for every agent
     prompts/           # one versioned prompt file per agent (*.md)
-  analysis/            # PURE. windows, exposure, scoring, statuses, AnalysisInput/AnalysisResult
+  analysis/            # PURE. windows, exposure, scoring, statuses, AnalysisInput/AnalysisResult,
+                       #   config.py (AnalysisConfig; pure AnalysisConfig.from_toml(text: str))
   summary/             # builds view models from AnalysisResult; templates/ (Jinja2); signed links
   db/
     models.py          # SQLAlchemy models
@@ -141,11 +142,14 @@ tests/
 | ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `domain` imports nothing from `hassas`                                                   | Shared vocabulary; no cycles.                         |
 | `analysis` imports only `domain` (and its own config types)                              | ANA-9/10 purity; benchmark calls it directly (BEN-4). |
-| Nothing outside `channels/` imports `hassas.channels`; no `telegram`/`whatsapp` SDK imports outside it | CH-1.                                         |
-| `channels` may import `messaging`, `domain`, `conversation` (entry point only)          | Adapters translate, they don't decide.                |
+| Nothing outside `channels/` imports `hassas.channels`, except `hassas.main`; no `telegram`/`whatsapp` SDK imports outside it | CH-1. `main` is the only place that wires the app together. |
+| `channels` may import `messaging`, `domain`, `config`, `logging`, and the top-level `hassas.conversation` package only | Adapters translate, they don't decide. Never `db`, `agents`, `analysis`, `jobs`, `summary` or conversation submodules. |
 | `conversation`, `agents`, `jobs`, `summary` reach the DB only through `db.repositories` | Keeps SQL in one place; easy fakes.                   |
 | `agents` never import `conversation` or `channels`                                       | Research/verification run headless in jobs.           |
 | `benchmark` imports `analysis` and `domain` only                                         | BEN-4: no LLM, no DB.                                 |
+| Nothing imports `hassas.main`                                                            | It is the composition root; keeps the CH-1 exception from becoming a back door. |
+
+Core code sends messages through a sender protocol defined in `messaging/`; `hassas.main` passes in the concrete adapter. `jobs` never import `channels`. Any `hassas.db` module except `repositories` is off limits to those four packages, so a database-to-`AnalysisInput` mapping is reached through a repository method. The contracts are in `pyproject.toml` (`[tool.importlinter]`) and run as `uv run lint-imports`; ADR 0005 explains their shape.
 
 ---
 
@@ -178,6 +182,7 @@ class LLMClient(Protocol):
 **Analysis** (`analysis/`)
 
 - `analyze(input: AnalysisInput, config: AnalysisConfig, seed: int) -> AnalysisResult`. A pure function.
+- `AnalysisConfig` lives in `analysis/config.py` with a pure `AnalysisConfig.from_toml(text: str)`. Callers (`hassas/config.py` for the app, the benchmark CLI) read `config/analysis.toml` themselves, so `analysis/` does no I/O.
 - `AnalysisInput`: the user's timezone, plus meals (event time + precision; dishes → canonical ingredient keys with confidence and allergen groups), reactions (onset + precision, severity, symptom category), and cofactors. All times are UTC-aware datetimes.
 - The engine derives everything else itself: active days (ANA-1), episodes from nearby reactions (ANA-13), midpoints for imprecise times (ANA-15). Severity, symptom category and known triggers never reach scoring (ANA-11, ANA-14, ANA-16).
 - `AnalysisResult`: `PatternResult`s at ingredient level and at allergen-group level (ANA-12) (key, score, range, status, evidence meal ids), plus the windows used, logging coverage (days logged, active days), the config hash and the seed. Storing the config hash makes any summary reproducible.
@@ -291,7 +296,7 @@ Decisions are recorded as ADRs in [`docs/adr/`](adr/), using the Michael Nygard 
 | 0002 | SQLAlchemy 2.0 + Alembic with psycopg 3                       |
 | 0003 | Plain httpx for the Telegram adapter                          |
 | 0004 | OpenAI SDK (Responses API) against the Meta Model API, behind `LLMClient` |
-| 0005 | Package layout and import-linter dependency rules             |
+| [0005](adr/0005-package-layout-and-import-rules.md) | Enforce package layout and import-linter dependency rules |
 | 0006 | Two-tier config: env for secrets, `analysis.toml` for algorithm parameters |
 
 **Decided 2026-11-11, to record with the change that uses them:** no pre-consent holding (ONB-2), ingredient vocabulary + allergen groups (VER-6, VER-7, ANA-12), sync ack path (CHAT-7), Meta built-in web search (behind `SearchClient`), summary links 30 days + revocable (SUM-1), transcription via Meta + ffmpeg (CHAT-8).
