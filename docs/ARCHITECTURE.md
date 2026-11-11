@@ -1,6 +1,6 @@
 # Hassas — Architecture
 
-**Status:** Target design — ROADMAP phase 1 not started · **Last updated:** 2026-11-11
+**Status:** Target design — ROADMAP phase 1 in progress · **Last updated:** 2026-11-11
 **Context:** [IDEA.md](IDEA.md) (why) · [PRD.md](PRD.md) (what) · [ROADMAP.md](ROADMAP.md) (order) · [adr/](adr/) (why each technical decision was made)
 
 This document describes **how Hassas is built**: the stack, the module structure and the rules between modules. Per-phase notes live in ROADMAP.md. It describes the system as it should be _now_. When a decision changes it, update this file and record the decision as an ADR (see §12).
