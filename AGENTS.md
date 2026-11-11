@@ -42,7 +42,16 @@ Hassas is a chat companion that finds patterns between meals and food reactions 
 - The agent writes the ADR in the same PR as the change it justifies: Context names the alternatives considered, Consequences list the downsides. Update the index in ARCHITECTURE.md §12, and the relevant ARCHITECTURE.md section if the design changes.
 
 ## Stack & structure
-Defined in `docs/ARCHITECTURE.md` (§2 stack, §4 module map and import rules). Python + FastAPI + uv, PostgreSQL, Procrastinate, Meta's Muse models via the Meta Model API (OpenAI SDK, Responses API, behind `LLMClient`), Telegram Bot API (WhatsApp later). A library or pattern outside ARCHITECTURE.md comes with an ADR. Once real config exists, list the verified commands here (uv, test, lint, CI order).
+Defined in `docs/ARCHITECTURE.md` (§2 stack, §4 module map and import rules). Python + FastAPI + uv, PostgreSQL, Procrastinate, Meta's Muse models via the Meta Model API (OpenAI SDK, Responses API, behind `LLMClient`), Telegram Bot API (WhatsApp later). A library or pattern outside ARCHITECTURE.md comes with an ADR.
+
+Verified commands:
+- `uv sync`: install dependencies
+- `uv run pre-commit install`: enable the git hooks (ruff, end-of-file, large files, gitleaks)
+- `uv run ruff format .` and `uv run ruff check .`: format and lint
+- `uv run mypy src`: type-check (strict)
+- `uv run pytest`: tests, `llm` evals excluded
+- `uv run pytest -m llm`: LLM evals (costs credits; exits 5 until the first eval exists)
+- `uv run fastapi dev`: run the app with reload
 
 ## Agent skills
 

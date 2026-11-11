@@ -47,7 +47,7 @@ PRD §6 fixes the first four rows. The rest fill the gaps.
 | Logging            | **structlog**, JSON output, trace id in a `contextvar`                     | PRD §7 observability.                                                                                                                |
 | Testing            | **pytest**, pytest-asyncio, **hypothesis**, **respx** (mock httpx)          | Hypothesis suits ANA-9/ANA-10 property tests; respx fakes Telegram and search HTTP.                                                 |
 | Lint / format      | **ruff** (`ruff check`, `ruff format`)                                      | One fast tool.                                                                                                                       |
-| Type checking      | **mypy**                                                                     | Most widely documented. Start lenient; tighten per module (`analysis/` and `domain/` strict first).                                 |
+| Type checking      | **mypy**                                                                     | Most widely documented. Strict (`strict = true`) across `src/` from the start, with the `pydantic.mypy` plugin.                       |
 | Architecture lint  | **import-linter**                                                           | Turns the dependency rules in §4 (incl. CH-1) into a CI failure.                                                                    |
 | Git hooks          | **pre-commit** (ruff, ruff-format, end-of-file, no large files, secret scan) | Catch issues before CI.                                                                                                             |
 | CI                 | **GitHub Actions**                                                          | §9.                                                                                                                                  |
@@ -165,8 +165,9 @@ These are the interfaces most code depends on. Change them deliberately.
 
 ```python
 class LLMClient(Protocol):
-    async def complete_json(self, *, model: str, system: str, user: str,
-                            schema: type[BaseModel], trace_id: str) -> BaseModel: ...
+    async def complete_json(
+        self, *, model: str, system: str, user: str, schema: type[BaseModel], trace_id: str
+    ) -> BaseModel: ...
 ```
 
 - The implementation wraps `openai.AsyncOpenAI(base_url=settings.llm_base_url, api_key=settings.llm_api_key)`.
@@ -284,7 +285,7 @@ Decisions are recorded as ADRs in [`docs/adr/`](adr/), using the Michael Nygard 
 
 | #    | Decision                                                      |
 | ---- | ------------------------------------------------------------- |
-| 0001 | Record architecture decisions (use Nygard ADRs)               |
+| [0001](adr/0001-record-architecture-decisions.md) | Record architecture decisions (use Nygard ADRs)               |
 | 0002 | SQLAlchemy 2.0 + Alembic with psycopg 3                       |
 | 0003 | Plain httpx for the Telegram adapter                          |
 | 0004 | OpenAI SDK (Responses API) against the Meta Model API, behind `LLMClient` |
