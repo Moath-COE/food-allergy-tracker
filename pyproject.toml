@@ -24,6 +24,7 @@ module-name = "hassas"
 
 [dependency-groups]
 dev = [
+    "import-linter>=2.16",
     "mypy>=2.4.1",
     "pre-commit>=4.7.0",
     "pytest>=9.2.0",
@@ -52,3 +53,132 @@ warn_required_dynamic_aliases = true
 testpaths = ["tests"]
 addopts = '--strict-markers -m "not llm"'
 markers = ["llm: evals against the real model; cost credits"]
+
+# Dependency rules from ARCHITECTURE.md section 4 (ADR 0005). Run with `uv run lint-imports`.
+# Wildcard forms (`hassas.*`) are used on purpose: a new top-level module is covered without
+# editing the contracts. "Allowed" imports are listed in ignore_imports, so anything not listed fails.
+[tool.importlinter]
+root_packages = ["hassas", "benchmark"]
+# Needed for the SDK contract; external packages need not be installed.
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "domain imports nothing else from hassas (ARCHITECTURE section 4)"
+type = "forbidden"
+source_modules = ["hassas.domain"]
+forbidden_modules = ["hassas.*"]
+
+[[tool.importlinter.contracts]]
+name = "analysis imports only domain from hassas (ANA-9, BEN-4)"
+type = "forbidden"
+source_modules = ["hassas.analysis"]
+forbidden_modules = ["hassas.*"]
+ignore_imports = [
+    "hassas.analysis -> hassas.domain",
+    "hassas.analysis -> hassas.domain.**",
+    "hassas.analysis.** -> hassas.domain",
+    "hassas.analysis.** -> hassas.domain.**",
+]
+unmatched_ignore_imports_alerting = "none"
+
+[[tool.importlinter.contracts]]
+name = "CH-1: only hassas.main imports hassas.channels"
+type = "forbidden"
+source_modules = ["hassas.*"]
+forbidden_modules = ["hassas.channels"]
+ignore_imports = [
+    "hassas.main -> hassas.channels",
+    "hassas.main -> hassas.channels.**",
+]
+unmatched_ignore_imports_alerting = "none"
+
+[[tool.importlinter.contracts]]
+name = "CH-1: no channel SDK is imported outside hassas.channels"
+type = "forbidden"
+source_modules = ["hassas.*", "benchmark"]
+forbidden_modules = ["telegram", "aiogram", "telebot", "whatsapp", "pywa"]
+ignore_imports = [
+    "hassas.channels -> telegram",
+    "hassas.channels -> aiogram",
+    "hassas.channels -> telebot",
+    "hassas.channels -> whatsapp",
+    "hassas.channels -> pywa",
+    "hassas.channels.** -> telegram",
+    "hassas.channels.** -> aiogram",
+    "hassas.channels.** -> telebot",
+    "hassas.channels.** -> whatsapp",
+    "hassas.channels.** -> pywa",
+]
+unmatched_ignore_imports_alerting = "none"
+
+[[tool.importlinter.contracts]]
+name = "channels import only messaging, domain, config, logging and top-level conversation"
+type = "forbidden"
+source_modules = ["hassas.channels"]
+forbidden_modules = ["hassas.*"]
+# Indirect imports are allowed: channels -> conversation -> conversation.x is fine.
+allow_indirect_imports = true
+ignore_imports = [
+    "hassas.channels -> hassas.messaging",
+    "hassas.channels -> hassas.messaging.**",
+    "hassas.channels -> hassas.domain",
+    "hassas.channels -> hassas.domain.**",
+    "hassas.channels -> hassas.config",
+    "hassas.channels -> hassas.logging",
+    "hassas.channels -> hassas.conversation",
+    "hassas.channels.** -> hassas.messaging",
+    "hassas.channels.** -> hassas.messaging.**",
+    "hassas.channels.** -> hassas.domain",
+    "hassas.channels.** -> hassas.domain.**",
+    "hassas.channels.** -> hassas.config",
+    "hassas.channels.** -> hassas.logging",
+    "hassas.channels.** -> hassas.conversation",
+]
+unmatched_ignore_imports_alerting = "none"
+
+[[tool.importlinter.contracts]]
+name = "core reaches the database only through hassas.db.repositories"
+type = "forbidden"
+source_modules = [
+    "hassas.conversation",
+    "hassas.agents",
+    "hassas.jobs",
+    "hassas.summary",
+]
+forbidden_modules = ["hassas.db"]
+# Indirect imports are allowed: conversation -> db.repositories -> db.models is fine.
+allow_indirect_imports = true
+ignore_imports = [
+    "hassas.** -> hassas.db.repositories",
+    "hassas.** -> hassas.db.repositories.**",
+]
+unmatched_ignore_imports_alerting = "none"
+
+[[tool.importlinter.contracts]]
+name = "nothing imports hassas.main, the composition root"
+type = "forbidden"
+source_modules = ["hassas.*", "benchmark"]
+forbidden_modules = ["hassas.main"]
+
+[[tool.importlinter.contracts]]
+name = "agents never import conversation or channels"
+type = "forbidden"
+source_modules = ["hassas.agents"]
+forbidden_modules = ["hassas.conversation", "hassas.channels"]
+
+[[tool.importlinter.contracts]]
+name = "benchmark imports only analysis and domain from hassas (BEN-4)"
+type = "forbidden"
+source_modules = ["benchmark"]
+forbidden_modules = ["hassas"]
+ignore_imports = [
+    "benchmark -> hassas.analysis",
+    "benchmark -> hassas.analysis.**",
+    "benchmark -> hassas.domain",
+    "benchmark -> hassas.domain.**",
+    "benchmark.** -> hassas.analysis",
+    "benchmark.** -> hassas.analysis.**",
+    "benchmark.** -> hassas.domain",
+    "benchmark.** -> hassas.domain.**",
+]
+unmatched_ignore_imports_alerting = "none"
