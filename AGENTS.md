@@ -53,6 +53,8 @@ Defined in `docs/ARCHITECTURE.md` (§2 stack, §4 module map and import rules). 
 
 Verified commands:
 - `uv sync`: install dependencies
+- `uv sync --locked`: install exactly what `uv.lock` pins; fails on a stale lockfile (CI)
+- `uv run ruff format --check .`: fail on unformatted code without rewriting it (CI)
 - `uv run pre-commit install`: enable the git hooks (ruff, end-of-file, large files, gitleaks)
 - `uv run ruff format .` and `uv run ruff check .`: format and lint
 - `uv run mypy src`: type-check (strict)

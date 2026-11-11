@@ -241,7 +241,9 @@ GitHub Actions on every PR and on `main`, fastest checks first:
 5. `uv run lint-imports`
 6. `uv run pytest -m "not llm"` (with a Postgres service)
 
-A PR merges only when all of these are green (AGENTS.md git workflow). From ROADMAP phase 13, CI also runs a small benchmark (fewer users) to catch regressions quickly. The full N = 300 run is a local command.
+A separate `secrets` job runs gitleaks over the full git history next to these checks.
+
+A PR merges only when all of these and the `secrets` job are green (AGENTS.md git workflow). From ROADMAP phase 13, CI also runs a small benchmark (fewer users) to catch regressions quickly. The full N = 300 run is a local command.
 
 **Commands** _(target — verify against `pyproject.toml` once they exist, then mirror in AGENTS.md)_
 
