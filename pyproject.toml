@@ -12,9 +12,6 @@ dependencies = [
     "pydantic-settings>=2.16.2",
 ]
 
-[project.scripts]
-start-dev = "hassas.main:main"
-
 [tool.fastapi]
 entrypoint = "hassas.main:app"
 
@@ -27,6 +24,31 @@ module-name = "hassas"
 
 [dependency-groups]
 dev = [
+    "mypy>=2.4.1",
+    "pre-commit>=4.7.0",
     "pytest>=9.2.0",
     "ruff>=0.17.4",
 ]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "ASYNC", "DTZ", "T20"]
+
+[tool.mypy]
+strict = true
+python_version = "3.14"
+plugins = ["pydantic.mypy"]
+files = ["src"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = '--strict-markers -m "not llm"'
+markers = ["llm: evals against the real model; cost credits"]
