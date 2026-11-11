@@ -31,12 +31,12 @@ This is the **plan**: the order of work, as one numbered line of small phases. S
 **You can test:** a PR shows green CI (format, lint, types, import rules, tests with Postgres).
 **Covers:** setup (ARCHITECTURE §2, §9)
 
-- 1.1 Tooling: ruff, mypy, pytest config (`llm` marker excluded by default), pre-commit with a secret scan; ADR 0001 (record decisions as ADRs)
-- 1.2 Package layout and import-linter contracts for ARCHITECTURE §4, incl. CH-1; ADR 0005
-- 1.3 Docker Compose Postgres, `Settings` with unprefixed env vars + `.env.example`, structlog with a trace-id contextvar; ADR 0006
-- 1.4 GitHub Actions running ARCHITECTURE §9 in order, with a Postgres service
+- 1.1 Tooling: ruff, mypy strict, pytest config with the `llm` marker, pre-commit with a gitleaks secret scan, first test; ADR 0001 (record decisions as ADRs)
+- 1.2 GitHub Actions running ARCHITECTURE §9 in order, plus a gitleaks job
+- 1.3 Package layout and import-linter contracts for ARCHITECTURE §4, incl. CH-1; adds `lint-imports` to CI; ADR 0005
+- 1.4 Docker Compose Postgres 18, `Settings` with unprefixed env vars + `.env.example`, structlog with a trace-id contextvar, a `SELECT 1` integration test; adds the Postgres service to CI; ADR 0006
 
-**Notes:** CI first, so every later task merges against green checks. The scaffold still disagrees with the docs: `Settings` uses the `APP_` prefix (§7 says no prefix) and `pyproject.toml`'s `start-dev` script points at a `main()` that doesn't exist. Fix both here, and list the verified commands in AGENTS.md.
+**Notes:** tooling first, then CI, so every later task merges against green checks. Each later task extends the CI workflow with the check it introduces. The scaffold still disagrees with the docs: `Settings` uses the `APP_` prefix (§7 says no prefix); 1.4 fixes it.
 
 ### 2. Neutral core + fake chat
 
