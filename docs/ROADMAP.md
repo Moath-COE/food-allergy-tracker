@@ -1,225 +1,236 @@
 # Hassas — Roadmap
 
-**Last updated:** 2026-11-10
-**How to use this:** no dates. Work through phases one at a time, whenever there's time. Each phase has a goal, a task list, and a "done when" check. Requirement IDs refer to [PRD.md](PRD.md); the _why_ is in [IDEA.md](IDEA.md).
+**Last updated:** 2026-11-11
+**Context:** [PRD.md](PRD.md) (what counts as done, requirement IDs) · [ARCHITECTURE.md](ARCHITECTURE.md) (how) · [IDEA.md](IDEA.md) (why)
 
-**Order**
+This is the **plan**: the order of work, as one numbered line of small phases. Status lives in GitHub (see "Tracking").
 
-- **Phases 1–5 build the thin end-to-end slice** (all Must requirements). Do them in order; Phase 2 needs no chat or LLM, so it can also run alongside Phase 1.
-- **Phases 6–9 add the full Version 1 features** (Should requirements), in any order. Dependencies are noted.
-- **Phase 10 (open beta)** needs at least Phases 6 and 9. **Phase 11 (WhatsApp)** comes last.
+---
 
-**Working rules**
+## How it works
 
-- Every phase ends with something that runs, and all tests pass.
-- Acceptance checks become automated tests named by ID (`test_LOG_2`).
-- Add statistical sophistication one step at a time, and check each step against the benchmark: keep it only if the benchmark doesn't get worse.
-- Never trade away: safety (SAF-1–8), determinism (ANA-9, ANA-10), the benchmark.
-- All agents use Meta's models via the Meta Model API (PRD §2).
-- Small sessions are fine: each task is meant to fit in one or two sittings.
+- **Task** = one branch = one PR, sized for one agent session. It names the requirement IDs it covers; their acceptance checks become ID-named tests (AGENTS.md).
+- **Phase** = one outcome the owner can try: in Telegram, in the local fake chat, or with the benchmark command. 2–5 tasks. **You can test** is the exit check.
+- **Part A** (phases 1–15) builds every Must requirement as a thin end-to-end slice, in order. **Part B** (phases 16+) adds the Should requirements; its order is set after internal testing.
+- Global rules, not repeated per phase: CI green on every PR; the schema grows with the phases (each adds only the tables it uses, as an Alembic migration); each ADR lands in the PR that first uses the decision; any change to `analysis/` or `config/analysis.toml` from phase 13 on includes before/after benchmark numbers and is kept only if the benchmark doesn't get worse.
+- Never trade away: safety (SAF-\*), determinism (ANA-9, ANA-10), the benchmark.
+
+**Tracking**
+
+- Each phase is a GitHub milestone named `N. Phase name`.
+- When a phase starts, each task becomes an issue titled `[N.M] Task`, in that milestone. Issues are the status; this file has no checkboxes.
+- Branch names keep the AGENTS.md format (`feat/ch-3-choice-validator`), not the task number.
+- When the plan changes (a task added, split or moved), update this file in the same PR or a small `docs` PR.
 
 ---
 
 ## Part A — Thin end-to-end slice (Must)
 
-### Phase 1 — Foundations: project, channel layer, Telegram
+### 1. Repo ready
 
-**Goal:** a Telegram bot on a channel-neutral core that onboards a user.
+**You can test:** a PR shows green CI (format, lint, types, import rules, tests with Postgres).
+**Covers:** setup (ARCHITECTURE §2, §9)
 
-- [ ] Project setup per PRD §6: repo, Python/FastAPI/Postgres with uv, CI, `.env` git-ignored
-- [ ] Database schema for the PRD §5 entities (User, ChannelIdentity, Meal, Dish, Ingredient, Reaction, Cofactor, PendingNudge, Window, PatternResult)
-- [ ] Neutral `InboundMessage` / `OutboundMessage` types: `Text`, `Choice`, `SummaryLink`, `Nudge` (CH-1, CH-2)
-- [ ] All channel code in `channels/`; import lint check (CH-1)
-- [ ] `Choice` validator: ≤ 3 options, labels ≤ 20 chars, typed replies accepted (CH-3)
-- [ ] Neutral markup renderer for Telegram HTML and WhatsApp markup; 4,000-char limit (CH-8)
-- [ ] `ChannelIdentity` with hashed external ids; no channel columns on User (CH-7)
-- [ ] Proactive-message policy + `PendingNudge`; held nudges delivered on the next user message (CH-5)
-- [ ] Telegram adapter: webhook, inline keyboards, commands menu — no message editing yet (CH-10, CHAT-1)
-- [ ] WhatsApp-constraints fake adapter + shared conversation test suite in CI (CH-9)
-- [ ] Onboarding conversation: language, timezone, consent, optional known triggers (ONB-1)
-- [ ] Nothing stored before consent; early logs held or discarded (ONB-2)
-- [ ] Choose development hosting: home lab + Cloudflare Tunnel or a cloud host (PRD §8)
+- 1.1 Tooling: ruff, mypy, pytest config (`llm` marker excluded by default), pre-commit with a secret scan; ADR 0001 (record decisions as ADRs)
+- 1.2 Package layout and import-linter contracts for ARCHITECTURE §4, incl. CH-1; ADR 0005
+- 1.3 Docker Compose Postgres, `Settings` with unprefixed env vars + `.env.example`, structlog with a trace-id contextvar; ADR 0006
+- 1.4 GitHub Actions running ARCHITECTURE §9 in order, with a Postgres service
 
-**Done when:** a new user onboards in Telegram, and the same onboarding passes on the WhatsApp-constraints fake adapter.
+**Notes:** CI first, so every later task merges against green checks. The scaffold still disagrees with the docs: `Settings` uses the `APP_` prefix (§7 says no prefix) and `pyproject.toml`'s `start-dev` script points at a `main()` that doesn't exist. Fix both here, and list the verified commands in AGENTS.md.
 
-### Phase 2 — Analysis engine + benchmark
+### 2. Neutral core + fake chat
 
-**Goal:** the headline result — Hassas beats naive counting — with no chat or LLM involved.
+**You can test:** a local CLI chat echoes your messages, running under WhatsApp limits (no edit, ≤ 3 options, no proactive sends, no commands menu).
+**Covers:** CH-2, CH-3, CH-8, CH-9
 
-- [ ] Decide starting values: minimum-evidence threshold, status rules, control-window matching rule (PRD §8)
-- [ ] Case vs. control comparison with a hard 0–8 h lookback and matched symptom-free windows (ANA-1)
-- [ ] Confidence-weighted exposure, weights from config (ANA-2)
-- [ ] Pattern statuses + minimum-evidence threshold, all rules in config, one unit test per status (ANA-7, SAF-5)
-- [ ] Severity stored but not scored (ANA-11)
-- [ ] Deterministic, seeded output (ANA-9)
-- [ ] Event-time ordering; full rerun on any insert or edit; shuffled-order test (ANA-10)
-- [ ] Simulator: seedable synthetic users (default N = 300) with hidden triggers, 0–8 h delays, staples, noisy logs (BEN-1)
-- [ ] Benchmark command: Hassas vs. naive counting, top-1 and top-3, table + chart (BEN-3, BEN-4)
+- 2.1 `InboundMessage` / `OutboundMessage` (`Text`, `Choice`, `SummaryLink`, `Nudge`) and the `Choice` validator (CH-2, CH-3)
+- 2.2 Neutral markup with Telegram HTML and WhatsApp renderers, 4,000-char limit (CH-8)
+- 2.3 `ChannelCapabilities`, WhatsApp-constraints fake adapter, CLI chat (CH-9)
+- 2.4 Shared conversation suite, parametrized over adapters, in CI (CH-9)
 
-**Done when:** one command prints "naive X% vs Hassas Y%" on 300 users, with Hassas top-1 ≥ 20 points above naive (PRD §1).
+**Notes:** the fake adapter comes before Telegram: if a flow works under WhatsApp limits, Telegram is the easy case.
 
-### Phase 3 — Conversation agent + safety
+### 3. Telegram echo
 
-**Goal:** Hassas understands meals, reactions and times in English and Arabic, and handles severe symptoms safely.
+**You can test:** message the bot through the dev tunnel and get a reply; add it to a group and it posts a notice and leaves.
+**Needs:** 2 · **Covers:** CH-1, CH-10 (webhook, sending), CH-12, CHAT-1
 
-- [ ] Choose the Meta model for the conversation agent (PRD §8)
-- [ ] Background job queue with Procrastinate (needed for CHAT-7; research jobs plug into it in Phase 4)
-- [ ] Extract meals from English text: dishes, place, time (CHAT-2)
-- [ ] Extract meals from Arabic (any dialect) and mixed text; ≥ 20-phrase test set, ≥ 90% (CHAT-3)
-- [ ] Extract reactions: symptoms, onset, severity (CHAT-4)
-- [ ] Relative and past times in the user's timezone (CHAT-6)
-- [ ] Backfill past meals and reactions in the right order (CHAT-14)
-- [ ] Instant ack (< 3 s) with work queued in the background (CHAT-7)
-- [ ] Persona: 1–2 lines, user's language and tone (CHAT-9)
-- [ ] Commands also work as natural language in EN + AR (CH-6)
-- [ ] Severe-symptom detection, ~20 EN/AR phrases incl. dialects, 100%; referral first, no humor (SAF-1, SAF-2)
-- [ ] Adversarial test sets: no diagnosis, no dietary advice, off-topic redirect (SAF-3, SAF-4, SAF-8)
+- 3.1 Telegram adapter: webhook with secret-token check, httpx Bot API client, `Text` sending, added to the conversation suite with respx; ADR 0003 (CH-1, CH-10, CHAT-1)
+- 3.2 Group chats: one short notice, leave, nothing stored (CH-12)
 
-**Done when:** the EN/AR phrase set parses at ≥ 90%, and the severe-symptom set is 100%.
+**Notes:** trap: Telegram concepts (`chat_id`, `callback_data`) leaking out of `channels/`. The import-linter contract should catch it.
 
-### Phase 4 — Research + verification agents
+### 4. Onboarding
 
-**Goal:** each logged dish becomes a sourced, confidence-rated ingredient list, in the background.
+**You can test:** a new user onboards (language, timezone, consent incl. 18+, optional known triggers) in Telegram and in the fake chat, and the profile is stored.
+**Needs:** 3 · **Covers:** CH-7, CH-10 (keyboards, commands menu), ONB-1
 
-- [ ] Choose the search API and the Meta models for research and verification (PRD §8)
-- [ ] Research agent as a background job: structured ingredient list with sources (RES-1)
-- [ ] Source priority: official → product databases → recipes (RES-2)
-- [ ] Look for hidden components: dressings, sauces, oils, buns (RES-3)
-- [ ] Separate verification agent with no shared context (VER-1)
-- [ ] One confidence level per ingredient: confirmed / likely / possible (VER-2)
-- [ ] Every ingredient keeps a source or "user confirmed" (VER-3)
-- [ ] Log research time per dish against the 15-min soft limit
+- 4.1 `User` + `ChannelIdentity` tables, keyed hashing of external ids, first migration; ADR 0002 (CH-7)
+- 4.2 Onboarding as an explicit state machine of `Text` + `Choice` steps, typed replies matched to option text (ONB-1, CH-3)
+- 4.3 Telegram inline keyboards for `Choice`; commands menu (/start, /summary, /language, /delete) (CH-10)
 
-**Done when:** Caesar salad → anchovy (likely or confirmed) with sources, stored in the database.
+**Notes:** onboarding is code, not the LLM. Natural-language replies come with phase 9.
 
-### Phase 5 — End to end + basic Pattern Summary
+### 5. Consent + safety gate
 
-**Goal:** the full thin slice: a chat log goes all the way to a summary link.
+**You can test:** a log sent before consent gets "finish setup first", and "send it again" after consent; bumping `CONSENT_VERSION` asks again before anything else; "I can't breathe" gets the emergency warning first, in its language, even from a brand-new user.
+**Needs:** 4 · **Covers:** ONB-2, ONB-5, SAF-1, SAF-2 (keyword half), SAF-9
 
-- [ ] Wire it up: log → research → verification → analysis rerun → summary
-- [ ] Summary page behind a signed, expiring link; decide expiry time (SUM-1)
-- [ ] Page in the user's language, full RTL layout for Arabic (SUM-1)
-- [ ] Ranked ingredient table matching the analysis output (SUM-2)
-- [ ] Boundary statement always visible, in the page language (SUM-3)
-- [ ] Delete all my data: "delete my data" / /delete (SAF-7)
-- [ ] Encryption at rest; secrets audit (SAF-6)
-- [ ] Trace id across channel → conversation → research → verification → analysis (PRD §7)
-- [ ] Log LLM + search calls per meal; track Meta API credit use (PRD §7)
+- 5.1 Consent gate and versioning: nothing parsed or stored before consent (ONB-2, ONB-5); ADR: no pre-consent holding
+- 5.2 Severe-symptom fixture set (~20 EN/AR phrases incl. dialects) and the keyword pre-check as the first pipeline step (SAF-1, SAF-2)
+- 5.3 Banned-words test over fixed reply strings, EN + AR (SAF-9)
 
-**Done when:** a meal logged in Telegram leads to a summary link with a correct ranked table, and every Must acceptance check is an automated test that passes.
+**Notes:** the safety gate runs on every message, before the consent gate, and never depends only on the LLM. Fixture sets are the spec: write them before the code.
+
+### 6. Log a meal (English)
+
+**You can test:** "had a burger and fries at Joe's for dinner yesterday" → an ack that says what was understood, in 1–2 lines; the meal is stored with event time and precision, in the right timeline position.
+**Needs:** 5 · **Covers:** CHAT-2, CHAT-6, CHAT-9, CHAT-14, SAF-1/SAF-2 (LLM half)
+
+- 6.1 `LLMClient` (OpenAI SDK, Responses API, strict JSON schema, one retry) + `FakeLLMClient`; ADR 0004; ADR: Muse model for the conversation agent
+- 6.2 `Meal` / `Dish` tables and repositories
+- 6.3 Combined safety + extraction call; persona ack (CHAT-2, CHAT-9, SAF-1/2)
+- 6.4 Time resolution with precision (exact / approximate / part of day) and backfill (CHAT-6, CHAT-14)
+
+**Notes:** the LLM extracts "yesterday dinner"; code turns it into a timestamp in the user's timezone with an injected clock. Either safety signal (keyword or LLM) triggers the warning.
+
+### 7. Never wait
+
+**You can test:** with a slow LLM (fake or real), the ack still arrives in < 3 s, and the result follows as a second message; with a "no proactive" policy, it arrives on your next message instead.
+**Needs:** 6 · **Covers:** CHAT-7, CH-5
+
+- 7.1 Procrastinate app, worker command, trace id passed into jobs; job arguments carry ids only
+- 7.2 ~2 s timeout on the sync call → generic ack → background processing (CHAT-7); ADR: sync ack path
+- 7.3 Proactive-message policy + `PendingNudge`; held messages delivered on the next user message (CH-5)
+
+### 8. Reactions + Arabic
+
+**You can test:** "got hives about 2 hours after lunch" is stored with symptom, category, onset and severity; Arabic, dialect and mixed logs work like English ones.
+**Needs:** 7 · **Covers:** CHAT-3, CHAT-4
+
+- 8.1 `Reaction` table and reaction extraction (CHAT-4)
+- 8.2 EN/AR/mixed phrase set (≥ 20) as an `llm` eval, ≥ 90% (CHAT-3)
+
+### 9. Stays on topic
+
+**You can test:** "send my summary" and "ابعت الملخص" act like /summary; "am I allergic to nuts?" gets no diagnosis; "what should I avoid?" gets no dietary advice; off-topic questions get a short redirect.
+**Needs:** 8 · **Covers:** CH-6, SAF-3, SAF-4, SAF-8
+
+- 9.1 Commands as natural language, EN + AR (CH-6)
+- 9.2 Adversarial fixture sets and prompt fixes until they pass (SAF-3, SAF-4, SAF-8)
+
+### 10. Ingredient research
+
+**You can test:** log "Caesar salad" (or "my mom's molokhia") → a researched ingredient list with source URLs and types is stored a little later.
+**Needs:** 7 · **Covers:** RES-1, RES-2, RES-3, RES-7
+
+- 10.1 `SearchClient` on the Meta built-in `web_search`; ADR: web search; ADR: Muse model for research
+- 10.2 Research job: structured output, source priority, hidden components, home-cooked dishes as recipes (RES-1, RES-2, RES-3, RES-7)
+- 10.3 Research time per dish logged against the 15-min soft limit
+
+**Notes:** tests use recorded search responses, never live calls.
+
+### 11. Verified ingredients
+
+**You can test:** Caesar salad → anchovy (likely or confirmed) under a canonical key, with sources; "parmesan" and "جبنة" resolve to the same key; "it had garlic" → garlic confirmed.
+**Needs:** 10 · **Covers:** VER-1, VER-2, VER-3, VER-6, VER-7
+
+- 11.1 `config/allergen_groups.toml` (16 groups, EN + AR), seed `config/ingredients.toml`, `ingredient_keys` table; ADR: ingredient vocabulary + allergen groups (VER-6, VER-7)
+- 11.2 Verification job: separate prompt and call, input is only dish + research output + sources; one confidence level and ≥ 1 source per ingredient (VER-1, VER-2, VER-3); ADR: Muse model for verification
+- 11.3 Key resolution: exact alias → agent maps to an existing key → provisional key; user-listed ingredients stored as confirmed (VER-6, RES-7)
+
+**Notes:** enforce VER-1 in the function signature, and make an ingredient without a source impossible at the DB level.
+
+### 12. Benchmark baseline
+
+**You can test:** `uv run python -m benchmark` prints naive-counting top-1 / top-3 accuracy on 300 synthetic users, with a chart.
+**Covers:** BEN-1, BEN-3 (naive side), BEN-4
+
+- 12.1 `AnalysisInput` / `AnalysisResult` types and `config/analysis.toml` loader
+- 12.2 Seedable simulator: hidden triggers (often inside dishes), 0–8 h delays, staples, noisy logs, unlogged days, imprecise times, production key and group structure (BEN-1)
+- 12.3 Naive counting + frequency-normalized variant; benchmark CLI with table + chart (BEN-3, BEN-4)
+
+**Notes:** only `analysis/`, `benchmark/` and `config/`. No DB, no LLM, no FastAPI. This phase can start any time after phase 1 if there's a reason to.
+
+### 13. Engine beats naive
+
+**You can test:** the benchmark prints "naive X% vs Hassas Y%" with Y ≥ X + 20 on top-1 (PRD §1).
+**Needs:** 12 · **Covers:** ANA-1, ANA-2, ANA-7, ANA-9, ANA-10, ANA-11, ANA-12, ANA-13, ANA-14, ANA-15, ANA-16, SAF-5
+
+- 13.1 Event-time sorting, episodes (ANA-13), active days (ANA-1), midpoints for imprecise times (ANA-15)
+- 13.2 Case vs. control scoring with a hard 0–8 h window and confidence weights, at ingredient and allergen-group level (ANA-1, ANA-2, ANA-12); ADR: control-window matching rule
+- 13.3 Statuses and the minimum-evidence threshold, one unit test per status (ANA-7, SAF-5); ADR: thresholds and status rules
+- 13.4 Hypothesis property tests for ANA-9, ANA-10, ANA-11, ANA-14, ANA-16; small benchmark in CI
+
+### 14. Summary page
+
+**You can test:** send "summary" in Telegram → a link → a page in your language (RTL for Arabic) with ranked ingredient and allergen-group tables, statuses, "generated on" and the boundary statement; "cancel my summary links" kills old links.
+**Needs:** 11, 13 · **Covers:** SUM-1, SUM-2, SUM-3, ANA-10 (rerun on change)
+
+- 14.1 Analysis-rerun job: any new or changed meal, ingredient or reaction → full-history rerun → stored `AnalysisResult` (ANA-10)
+- 14.2 Signed, expiring (30 days), revocable links via the per-user link secret; ADR: summary links (SUM-1)
+- 14.3 Jinja page from the stored result: tables, boundary statement, EN + AR with RTL, banned-words test on templates (SUM-1, SUM-2, SUM-3, SAF-9)
+
+**Notes:** the page renders the stored `AnalysisResult`; it never runs analysis inside a request.
+
+### 15. Ready to test
+
+**You can test:** "delete my data" removes everything; logs show one trace id from webhook to analysis, and LLM + search cost per meal.
+**Needs:** 14 · **Covers:** SAF-6, SAF-7, PRD §7 (observability, cost)
+
+- 15.1 Delete my data / /delete, cascade + no-rows-left test (SAF-7)
+- 15.2 Encryption at rest + secrets audit; ADR: encryption at rest (SAF-6)
+- 15.3 Trace id end to end; per-call and per-meal LLM + search cost logging
+- 15.4 Audit: every Must acceptance check has a passing ID-named test
+
+### → Internal testing
+
+The owner (and anyone they invite) uses Hassas for real. Problems become fix tasks; once they're done, Part B starts, in an order chosen from what testing showed.
 
 ---
 
 ## Part B — Full Version 1 (Should)
 
-### Phase 6 — Smarter analysis
+Order is set after internal testing; tasks are written when a phase is picked. Each needs Part A.
 
-**Goal:** the full scoring from IDEA §2. Add one step at a time, benchmark after each.
+| #   | Phase                        | Covers                                                    |
+| --- | ---------------------------- | --------------------------------------------------------- |
+| 16  | Smarter scoring              | ANA-3, ANA-4                                              |
+| 17  | Score ranges                 | ANA-5, ranges on the summary (SUM-2)                      |
+| 18  | Cofactors                    | CHAT-5, ANA-6, BEN-2                                      |
+| 19  | Corrections + late details   | CHAT-12, CHAT-13, CHAT-15                                 |
+| 20  | Smart follow-ups             | ANA-8, CHAT-10, CHAT-11                                   |
+| 21  | Research reuse + conflicts   | RES-4, RES-5, RES-6, VER-4, VER-5                         |
+| 22  | Voice notes                  | CHAT-8, CH-11                                             |
+| 23  | Reminders + nudges           | CHAT-16, summary-ready nudge (PRD §3 flow E), CH-4        |
+| 24  | Timezone changes             | ONB-3                                                     |
+| 25  | Full summary                 | SUM-4, SUM-5, SUM-6, SUM-9, SUM-10                        |
+| 26  | Mini App                     | SUM-7                                                     |
 
-- [ ] Delay-weighted 0–8 h lookback, replacing the hard cutoff (ANA-3)
-- [ ] Bayesian shrinkage toward "no pattern" (ANA-4)
-- [ ] Monte Carlo over uncertain ingredients → seeded score ranges (ANA-5)
-- [ ] Cofactor comparison for top patterns (ANA-6) — _needs cofactor data: CHAT-5 (Phase 8) for real users; the simulator covers it for the benchmark_
-- [ ] "Most informative next question" selection (ANA-8)
-- [ ] Simulator: cofactor-dependent and delayed-trigger users; accuracy per user type (BEN-2)
+**Notes for when they're picked**
 
-**Done when:** each step has a recorded benchmark result, and the final engine beats the Phase 2 result.
-**Unlocks:** CHAT-10 (Phase 8) needs ANA-8; score ranges on the summary (Phase 9) need ANA-5.
-
-### Phase 7 — Stronger research and verification
-
-**Goal:** better ingredient data with less repeated work.
-
-- [ ] ≥ 3 independent sources when there's no official one; log source count (RES-4)
-- [ ] Reuse verified dishes per place (RES-5)
-- [ ] Research only new or changed dishes when a meal is amended (RES-6)
-- [ ] Flag conflicts between sources (VER-4)
-- [ ] User or restaurant confirmation upgrades or removes an ingredient (VER-5)
-
-**Done when:** a second log of the same dish + place makes no search call, and conflicting sources are flagged.
-
-### Phase 8 — Richer logging and conversation
-
-**Goal:** logging that feels effortless, including voice and corrections.
-
-- [ ] Choose the Meta model for voice transcription (PRD §8)
-- [ ] Voice notes, EN + AR, transcribed in the core (CHAT-8, CH-11)
-- [ ] Cofactor logging, incl. backfilled cofactors: exercise, alcohol, painkillers, illness (CHAT-5)
-- [ ] Corrections: "actually it was chicken" (CHAT-12)
-- [ ] Add forgotten details to an earlier meal (CHAT-13)
-- [ ] Ask which meal when a late detail is ambiguous (CHAT-15)
-- [ ] One targeted follow-up at a time, driven by ANA-8 (CHAT-10) — _needs Phase 6_
-- [ ] "Ask the restaurant" message drafts (CHAT-11)
-- [ ] Optional logging reminders through the nudge policy (CHAT-16)
-- [ ] "Summary ready" nudge when the evidence threshold is first reached (PRD §3 flow E)
-- [ ] Message editing for acks, with a fallback (CH-4)
-- [ ] Timezone inference + "I moved to Cairo" (ONB-3)
-
-**Done when:** ≥ 10 voice notes parse the same as typed text, and the correction and late-detail tests pass.
-
-### Phase 9 — Full Pattern Summary page
-
-**Goal:** the complete summary a user can take to a doctor.
-
-- [ ] Reaction timeline with shaded lookback windows, showing severity (SUM-4, ANA-11)
-- [ ] Evidence trail: meals, confidence, sources for top patterns (SUM-5)
-- [ ] Uncertainty highlights for fragile patterns (SUM-6)
-- [ ] Score ranges in the ranked table (SUM-2 + ANA-5) — _needs Phase 6_
-- [ ] Same page as a Telegram Mini App (SUM-7)
-- [ ] Mobile and print check, in both languages (doctors may get it printed)
-
-**Done when:** the page shows all IDEA §2 summary sections and looks identical in a browser and the Mini App.
+- **16, 17:** one scoring step per PR, benchmark before/after each. Monte Carlo takes a `numpy.random.Generator(seed)` passed in, never global state.
+- **20:** needs 16–17 for a meaningful "most informative" choice; CHAT-10 follow-ups come only from ANA-8.
+- **21:** a verified-dish cache keyed by normalized (dish, place) in `db/`; research jobs check it first.
+- **19:** corrections and late details reuse the phase 14 full-rerun path.
+- **22:** the adapter passes an `audio_ref`; download, WAV conversion (ffmpeg, ADR) and transcription happen in the core.
+- **26:** the same route with Telegram init-data auth (validated in `channels/telegram/`), not a separate frontend.
 
 ---
 
-## Part C — Launch and grow
+## Later
 
-### Phase 10 — Open beta
-
-**Goal:** real people using Hassas on Telegram. _Needs Phases 6 and 9 at minimum._
-
-- [ ] Production hosting, backups and monitoring
-- [ ] Privacy notice and data-handling page; consent text reviewed
-- [ ] Rate limits and per-user cost caps
-- [ ] In-chat feedback and a simple way to report problems
-- [ ] Invite a small group of testers (Arabic dialects + English)
-- [ ] Track usage: logs per user per week, drop-off after onboarding
-- [ ] Write up results for the bilingual blog series on moaz-coe.com
-
-**Done when:** a group of testers has used Hassas for 2+ weeks and the feedback is written down.
-
-### Phase 11 — WhatsApp as a premium channel
-
-**Goal:** add WhatsApp without changing the core.
-
-- [ ] Build the WhatsApp adapter against the existing conversation suite
-- [ ] Get reminder / summary-ready templates approved
-- [ ] Account linking: one user, Telegram + WhatsApp (CH-7)
-- [ ] Track message cost per active user; set the premium price (PRD §8)
-- [ ] Free/premium plan on User; payment
-
-**Done when:** the full conversation suite passes on the real WhatsApp adapter and a user can link both channels.
-
-**Setup notes**
-
-- Cloud API test number: free, no business verification, up to 5 verified recipients.
-- Temporary token expires every 24 h → use a System User permanent token.
-- Needs a public HTTPS webhook → Cloudflare Tunnel from the home lab (or ngrok).
-- Since 1 Oct 2026, Meta bills service messages.
-
----
-
-## Later / ideas
-
-Not planned yet; pick up when the phases above are done.
-
-- Cross-reaction detection (IDEA §6): flag ingredients related to a top pattern (e.g. other tree nuts)
-- Restaurant side: restaurants describe dishes by voice → ingredient & allergen cards + QR menu; Hassas uses verified restaurant cards instead of searching
+- WhatsApp adapter (must pass the conversation suite without changing the core; if the core has to change, that's a bug), account linking across channels (CH-7)
+- Cross-reaction detection (IDEA §6)
 - Richer onboarding form: Telegram Mini App, WhatsApp Flow (ONB-4)
-- PDF summary sent in chat as a fallback (SUM-8)
+- PDF summary in chat as a fallback (SUM-8)
+- Per-category scoring (ANA-14), benchmark-gated
 - Photo and barcode logging
-- Knowledge graph grown from the verified-dish database
+- Restaurant side: voice dish cards, QR menus
+- Knowledge graph from the verified-dish database
 - More channels (Messenger, SMS, own app)
+
+**Deferred decisions** (privacy and compliance, retention, terms, pricing, public launch, production hosting): PRD §8.
 
 **Permanently out:** diagnosis, dietary advice, nutrition features (IDEA §5).
 
@@ -232,6 +243,6 @@ Not planned yet; pick up when the phases above are done.
 3. Ranked ingredients: everyday staples ruled out; the hidden trigger ranked top.
 4. Evidence trail: which dishes contained it, and the sources behind it.
 5. Benchmark chart: Hassas vs. naive counting.
-6. Safety switch: a severe-symptom message → humor off, emergency referral.
+6. Safety switch: a severe-symptom message → humor off, emergency warning.
 
 **Pitch line:** _"حساس means both 'sensitive' and 'sensor.' Hassas is sensitive to every detail, so you don't have to be."_

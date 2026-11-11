@@ -35,6 +35,6 @@ Python, FastAPI and uv. PostgreSQL. Procrastinate for background jobs. Meta's mo
 
 ## Development
 
-Setup and run instructions will be added here once the project skeleton exists (ROADMAP Phase 1).
+Setup and run instructions will be added here once the project skeleton exists (ROADMAP phase 1).
 
 Work happens on short-lived branches, one per ROADMAP task, merged into `main` through pull requests. Branches are named `<type>/<req-id>-<short-description>` and commits follow Conventional Commits. See [AGENTS.md](AGENTS.md) for the full workflow.

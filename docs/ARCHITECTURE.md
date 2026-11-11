@@ -1,9 +1,9 @@
 # Hassas — Architecture
 
-**Status:** Target design — Phase 1 not started · **Last updated:** 2026-11-11
+**Status:** Target design — ROADMAP phase 1 not started · **Last updated:** 2026-11-11
 **Context:** [IDEA.md](IDEA.md) (why) · [PRD.md](PRD.md) (what) · [ROADMAP.md](ROADMAP.md) (order) · [adr/](adr/) (why each technical decision was made)
 
-This document describes **how Hassas is built**: the stack, the module structure, the rules between modules, and the technical approach for each ROADMAP phase. It describes the system as it should be _now_. When a decision changes it, update this file and record the decision as an ADR (see §12).
+This document describes **how Hassas is built**: the stack, the module structure and the rules between modules. Per-phase notes live in ROADMAP.md. It describes the system as it should be _now_. When a decision changes it, update this file and record the decision as an ADR (see §12).
 
 **For agents:** read this before writing code. If the code disagrees with this document, flag it and ask which is right. Don't introduce a library, module or pattern that isn't listed here without proposing an ADR first.
 
@@ -195,7 +195,7 @@ class LLMClient(Protocol):
 - **Ingredient vocabulary (VER-6, VER-7):** `ingredient_keys` table (canonical key, EN + AR names, aliases, allergen groups, status `seed` / `provisional`), seeded from `config/ingredients.toml`. Resolution order: exact alias match (deterministic) → verification agent maps to an existing key → otherwise a provisional key from the agent's proposal. Provisional keys score like any other. Promoting or merging them is a later admin task.
 - **Retention:** during development, data is kept as is. Retention, redaction and anonymization are deferred (PRD §8).
 - **Deletion (SAF-7):** foreign keys from all user data to `User` use `ON DELETE CASCADE`, so deleting a user removes everything. A test asserts no rows remain.
-- **Encryption at rest (SAF-6):** disk-level vs. column-level is decided in Phase 5 → ADR.
+- **Encryption at rest (SAF-6):** disk-level vs. column-level is decided in ROADMAP phase 15 → ADR.
 - **Job arguments** carry ids and the trace id only, never raw message text or health details.
 
 ---
@@ -240,7 +240,7 @@ GitHub Actions on every PR and on `main`, fastest checks first:
 5. `uv run lint-imports`
 6. `uv run pytest -m "not llm"` (with a Postgres service)
 
-A PR merges only when all of these are green (AGENTS.md git workflow). From Phase 2, CI also runs a small benchmark (fewer users) to catch regressions quickly. The full N = 300 run is a local command.
+A PR merges only when all of these are green (AGENTS.md git workflow). From ROADMAP phase 13, CI also runs a small benchmark (fewer users) to catch regressions quickly. The full N = 300 run is a local command.
 
 **Commands** _(target — verify against `pyproject.toml` once they exist, then mirror in AGENTS.md)_
 
@@ -260,8 +260,8 @@ uv run python -m benchmark       # BEN-3 table + chart
 
 - One **trace id** per inbound message, created in the adapter, stored in a `contextvar`, written to every log line, and passed into every job it enqueues (PRD §7).
 - structlog JSON logs. Never log raw health text or external ids, only internal ids.
-- Per LLM/search call: agent, model, prompt version, tokens, latency, cost estimate, trace id. Summed per meal (Phase 5 task).
-- Research time per dish is logged against the 15-min soft limit (Phase 4).
+- Per LLM/search call: agent, model, prompt version, tokens, latency, cost estimate, trace id. Summed per meal (ROADMAP phase 15).
+- Research time per dish is logged against the 15-min soft limit (ROADMAP phase 10).
 
 ---
 
@@ -280,7 +280,7 @@ uv run python -m benchmark       # BEN-3 table + chart
 
 Decisions are recorded as ADRs in [`docs/adr/`](adr/), using the Michael Nygard template in [`docs/adr/template.md`](adr/template.md). The rules are in AGENTS.md. This section only indexes them.
 
-**To record now** (decided in the architecture discussion, 2026-11-10):
+**Decided 2026-11-10, recorded in the ROADMAP task that first uses them** (phases 1–6):
 
 | #    | Decision                                                      |
 | ---- | ------------------------------------------------------------- |
@@ -294,61 +294,3 @@ Decisions are recorded as ADRs in [`docs/adr/`](adr/), using the Michael Nygard 
 **Decided 2026-11-11, to record with the change that uses them:** no pre-consent holding (ONB-2), ingredient vocabulary + allergen groups (VER-6, VER-7, ANA-12), sync ack path (CHAT-7), Meta built-in web search (behind `SearchClient`), summary links 30 days + revocable (SUM-1), transcription via Meta + ffmpeg (CHAT-8).
 
 **Open → becomes an ADR when decided** (mirrors PRD §8): minimum-evidence threshold and status rules, control-window matching within active days, Muse model per agent, encryption at rest, production hosting.
-
----
-
-## 13. Phase playbook
-
-How to approach each ROADMAP phase technically. The ROADMAP's "Done when" is the exit check; this lists the modules involved, the order inside the phase and the traps.
-
-> The ROADMAP is being rewritten (2026-11-11). This playbook follows the old phase numbers and will be revised with it.
-
-### Phase 1 — Foundations
-
-- **Order:** project setup (rename to `hassas`, remove the `items` scaffold, ruff/mypy/import-linter/pre-commit, Compose Postgres, CI) → `domain/` + DB schema + first migration → `messaging/` types, Choice validator, markup renderers → identity hashing → nudge policy + `PendingNudge` → Telegram adapter → fake adapter + conversation suite → onboarding → consent gate.
-- Set up CI first, so every later task merges against green checks.
-- Build the fake adapter **before** finishing the Telegram one. If onboarding works under WhatsApp constraints first, Telegram is the easy case.
-- Onboarding is an explicit state machine (state stored on `User`), not LLM-driven. In Phase 1, typed replies are matched against option text (CH-3); natural-language understanding comes in Phase 3.
-- **Trap:** letting Telegram concepts (`chat_id`, `callback_data`) leak into `conversation/`. The import-linter contract should fail if they do.
-
-### Phase 2 — Analysis engine + benchmark
-
-- Entirely in `analysis/`, `benchmark/` and `config/analysis.toml`. No DB, no FastAPI.
-- Write the **simulator and naive baseline first**, then the engine. You need something to measure against.
-- Decide the PRD §8 thresholds and the control-window rule up front (ADRs), and put the values in `analysis.toml`.
-- Hypothesis tests for ANA-9/10/11; one unit test per status (ANA-7).
-- Every later change to the engine includes a benchmark result in the PR.
-
-### Phase 3 — Conversation agent + safety
-
-- Set up Procrastinate first (the ack/async split is what makes CHAT-7 work).
-- `LLMClient` with the OpenAI SDK (Responses API, strict JSON schema); record the Muse model choice (ADR).
-- The **safety gate** is the first step of the pipeline, on every message. It's a fast keyword/phrase pre-check plus the safety class from the combined LLM call (§3), and either one firing triggers the warning. It never depends only on the LLM.
-- Build the fixture phrase sets (EN / AR dialects / mixed, severe, adversarial) **before** writing prompts. They are the spec.
-- Time resolution (CHAT-6) is deterministic code: the LLM extracts "yesterday dinner"; code turns it into a timestamp in the user's timezone with an injected clock.
-
-### Phase 4 — Research + verification
-
-- Both agents run as jobs. Verification gets **only** dish + research output + sources (VER-1), with a separate prompt and a separate call, no shared message history. Enforce this in the function signature.
-- Search is the Meta Model API's built-in `web_search` behind `SearchClient` (record the ADR); tests use recorded responses.
-- Resolve every ingredient to a canonical key (§6 Ingredient vocabulary); home-cooked dishes use recipe sources (RES-7).
-- Store source URL and type on every ingredient (VER-3). The DB constraint should make an ingredient without a source impossible.
-
-### Phase 5 — End to end + basic summary
-
-- Wire the jobs: verification done → enqueue analysis rerun (full history, ANA-10) → store `AnalysisResult`.
-- The summary page is a FastAPI route + Jinja template. Render from the stored `AnalysisResult`, never by re-running analysis inside a request. `dir="rtl"` and translated strings for Arabic (SUM-1).
-- Close the safety and ops items: delete (SAF-7), encryption (ADR), trace ids end to end, cost logging.
-- Exit check: every Must acceptance check has an ID-named test.
-
-### Phases 6–9 (Part B)
-
-- **6:** one scoring step per PR, each with benchmark before/after; keep it only if the result doesn't get worse. Monte Carlo uses `numpy.random.Generator(seed)` passed in, never global state.
-- **7:** a verified-dish cache keyed by normalized (dish, place) in `db/`; research jobs check it first (RES-5).
-- **8:** voice arrives as an `audio_ref` from the adapter; download + transcription happen in the core (CH-11). Corrections and late details reuse the Phase 2 full-rerun path.
-- **9:** the Mini App is the same route with a different auth (Telegram init-data validation in `channels/telegram/`), not a separate frontend.
-
-### Phases 10–11
-
-- **10:** production hosting ADR, backups, monitoring, rate limits. Semver tags start here. Privacy, retention and compliance (PRD §8 Deferred) are decided before any public release.
-- **11:** the WhatsApp adapter must pass the existing conversation suite **without changing the core**. If the core has to change, that's a bug in an earlier phase.

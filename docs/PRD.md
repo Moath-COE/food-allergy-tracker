@@ -265,9 +265,9 @@ Shared vocabulary for agents, database and engine.
 
 ## 8. Open questions
 
-- Which Muse model for each agent (conversation, research, verification)? _(ROADMAP Phases 3–4)_
-- Starting values for the minimum-evidence threshold and status rules? Proposed during the analysis work, tuned against the benchmark, recorded as an ADR. _(Phase 2)_
-- Control-window matching rule within active days: same time of day only, or also day of week? _(Phase 2)_
+- Which Muse model for each agent (conversation, research, verification)? _(ROADMAP phases 6, 10, 11)_
+- Starting values for the minimum-evidence threshold and status rules? Proposed during the analysis work, tuned against the benchmark, recorded as an ADR. _(ROADMAP phase 13)_
+- Control-window matching rule within active days: same time of day only, or also day of week? _(ROADMAP phase 13)_
 - Production hosting: a production-grade host, chosen at first deploy.
 
 **Resolved (2026-11-11)**

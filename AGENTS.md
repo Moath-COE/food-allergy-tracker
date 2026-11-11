@@ -9,7 +9,7 @@ Hassas is a chat companion that finds patterns between meals and food reactions 
 - Each acceptance check becomes an automated test named by its requirement ID, e.g. `test_CH_3_choice_rejects_four_options`.
 - Before opening the PR, run the CI checks locally (ARCHITECTURE.md §9) and get them green.
 - The owner merges. Agents open PRs and leave `main` to the owner.
-- `docs/ROADMAP.md` is being rewritten (2026-11-11). Until it is, the owner names the next task.
+- Work follows `docs/ROADMAP.md`: numbered phases of 1-PR tasks (`[N.M]`). Each phase is a GitHub milestone and each task an issue; the owner picks the next one.
 
 ## Source of truth
 - `docs/IDEA.md` (why), `docs/PRD.md` (what counts as done, requirement IDs), `docs/ROADMAP.md` (order of work), `docs/ARCHITECTURE.md` (how: stack, module structure, dependency rules) are loaded via `.opencode/opencode.json` and `CLAUDE.md`. If code disagrees with the docs, flag it and ask which one is right.
