@@ -18,7 +18,7 @@ The name is Arabic and means both "sensitive" and "sensor".
 
 ## What it never does
 
-Hassas never diagnoses and never gives dietary advice. Severe symptoms get an immediate emergency-care referral. The summary is the user's own data, organized, for discussion with a clinician.
+Hassas never diagnoses and never gives dietary advice. Severe symptoms get an immediate warning to seek emergency help. The summary is the user's own data, organized, for discussion with a clinician.
 
 ## Planned stack
 
@@ -31,6 +31,7 @@ Python, FastAPI and uv. PostgreSQL. Procrastinate for background jobs. Meta's mo
 | [docs/IDEA.md](docs/IDEA.md)         | Why: the problem, the approach and the safety principles |
 | [docs/PRD.md](docs/PRD.md)           | What: requirements by ID and their acceptance checks    |
 | [docs/ROADMAP.md](docs/ROADMAP.md)   | In what order: build phases and tasks                   |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How: stack, modules, dependency rules       |
 
 ## Development
 
